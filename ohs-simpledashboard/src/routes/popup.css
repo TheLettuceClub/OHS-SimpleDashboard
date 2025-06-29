@@ -1,0 +1,31 @@
+.modal {
+    font-size: 12px;
+}
+
+    .modal > .header {
+        width: 100%;
+        border-bottom: 1px solid gray;
+        font-size: 18px;
+        text-align: center;
+        padding: 5px 10px 10px 10px;
+        background: #808080;
+    }
+
+    .modal > .content {
+        width: 100%;
+        padding: 10px 10px 10px 10px;
+        font-size: 16px;
+        background: #808080;
+    }
+
+    .modal > .actions {
+        width: 100%;
+        padding: 10px 5px;
+        margin: auto;
+        text-align: center;
+        background: #808080;
+    }
+
+    .modal > .row {
+        padding: 200px;
+    }
