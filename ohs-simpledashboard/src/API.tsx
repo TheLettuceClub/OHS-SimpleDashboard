@@ -17,8 +17,10 @@
 import { hashCode } from "./util";
 import { type ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import EditDialog from "./EditDialog";
 
 /**
  * Jobs:
@@ -40,7 +42,7 @@ import { MoreHorizontal } from "lucide-react";
 
 let jobUniqueID = 1;
 
-class Job {
+export class Job {
 	key: number;
 	techName: string;
 	jobReason: string;
@@ -138,7 +140,6 @@ export async function EditJob(id: number, inName: string | undefined, inReason: 
  * Create new client => CreateNewClient
  * get list of clients => GetAllClients
  * edit specific client => EditClient
- * "delete" client, marking them inactive => DeleteClient
  */
 
 let clientUniqueID = 1;
@@ -166,28 +167,29 @@ export const ClientColumns: ColumnDef<Client>[] = [
 		header: "Actions",
 		enableHiding: false,
 		cell: ({ row }) => {
-			const payment = row.original;
-
 			return (
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button variant="ghost" className="h-8 w-8 p-0">
-							<span className="sr-only">Open menu</span>
-							<MoreHorizontal />
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">
-						<DropdownMenuItem
-							onClick={() => {
-								navigator.clipboard.writeText(payment.key.toString()).catch(() => {});
-							}}
-						>
-							Edit Client
-						</DropdownMenuItem>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem>Delete Client</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
+				<Dialog>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant="ghost" className="h-8 w-8 p-0">
+								<span className="sr-only">Open menu</span>
+								<MoreHorizontal />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DialogTrigger asChild>
+								<DropdownMenuItem>Edit Client</DropdownMenuItem>
+							</DialogTrigger>
+						</DropdownMenuContent>
+					</DropdownMenu>
+					<DialogContent>
+						<DialogHeader>
+							<DialogTitle>Edit Client:</DialogTitle>
+							<DialogDescription id="description"></DialogDescription>
+						</DialogHeader>
+						<EditDialog editdata={row.original} />
+					</DialogContent>
+				</Dialog>
 			);
 		},
 	},
@@ -215,23 +217,30 @@ function ValidateClientID(id: number): boolean {
 export async function GetAllClients(): Promise<string> {
 	return new Promise<string>((resolve) =>
 		setTimeout(() => {
+			//console.log("clientsDB is of length " + clientsDB.length);
 			resolve(JSON.stringify(clientsDB));
 			return;
 		}, 1002),
 	);
 }
 
-export async function CreateNewClient(inName: string, inAddr: string): Promise<string> {
+export async function CreateNewClient({ queryKey }: { queryKey: string[] }): Promise<string> {
+	console.log(queryKey);
+	const [inName, inAddr] = queryKey;
 	return new Promise<string>((resolve) =>
 		setTimeout(() => {
 			clientsDB.push(new Client(inName, inAddr));
+			//console.log("clientsDB is now of length " + clientsDB.length);
 			resolve(JSON.stringify(0));
 			return;
 		}, 560),
 	);
 }
 
-export async function EditClient(id: number, inName: string | undefined, inAddr: string | undefined): Promise<string> {
+export async function EditClient({ queryKey }: { queryKey: string[] }): Promise<string> {
+	const [idS, inName, inAddr, inActiveS] = queryKey;
+	const id = parseInt(idS);
+	const inActive = inActiveS === "true" ? true : false;
 	return new Promise<string>((resolve) =>
 		setTimeout(() => {
 			const editClient = getClientByID(id);
@@ -245,24 +254,12 @@ export async function EditClient(id: number, inName: string | undefined, inAddr:
 			if (inAddr !== undefined) {
 				editClient.clientAddress = inAddr;
 			}
+			if (inActive !== undefined) {
+				editClient.isActive = inActive;
+			}
 			resolve(JSON.stringify(0));
 			return;
 		}, 500),
-	);
-}
-
-export async function DeleteClient(id: number): Promise<string> {
-	return new Promise<string>((resolve) =>
-		setTimeout(() => {
-			const editClient = getClientByID(id);
-			if (editClient == undefined) {
-				resolve(JSON.stringify(-5));
-				return;
-			}
-			editClient.isActive = false;
-			resolve(JSON.stringify(0));
-			return;
-		}, 800),
 	);
 }
 
@@ -291,7 +288,7 @@ export async function DeleteClient(id: number): Promise<string> {
 
 let userUniqueID = 1;
 
-class User {
+export class User {
 	key: number;
 	username: string;
 	password: number;

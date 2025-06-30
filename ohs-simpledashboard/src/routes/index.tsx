@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { Client, ClientColumns, GetAllClients } from "../API";
+import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
+import { Client, ClientColumns, GetAllClients, CreateNewClient } from "../API";
 import { DataTable } from "@/components/ui/data-table";
 import Popup from "reactjs-popup";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,12 +10,13 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 export const Route = createFileRoute("/")({
 	component: Index,
 });
 
-const queryClient = new QueryClient();
+export const queryClient = new QueryClient();
 
 /**
  * This page will kinda do double duty. When not logged in, will display minimal info and request login.
@@ -33,13 +34,24 @@ function Index() {
 		);
 	}
 
-	//display the data now, using TanStack Query and such
+	function logout() {
+		sessionStorage.removeItem("login");
+		setLogin("false");
+	}
 
 	return (
 		<div className="p-2">
 			<h3 className="text-3x1 font-bold underline">Welcome Home!</h3>
+			<Button
+				onClick={() => {
+					logout();
+				}}
+			>
+				Log Out
+			</Button>
 			<QueryClientProvider client={queryClient}>
 				<ClientManagementPage />
+				<ReactQueryDevtools initialIsOpen={false} />
 			</QueryClientProvider>
 		</div>
 	);
@@ -64,10 +76,17 @@ function HeaderWithPopupButtons() {
 		},
 	});
 
+	const mutation = useMutation({
+		mutationFn: CreateNewClient,
+	});
+
 	function onSubmit(data: z.infer<typeof FormSchema>) {
 		console.log("submit button clicked");
-		console.log(data);
-		//TODO: add tanstack stuff
+		//console.log(data);
+		//TODO: add tanstack stuff? unknown if would work, need info on params
+		//CreateNewClient(data.cName, data.cAddr).catch(() => {});
+		mutation.mutate({ queryKey: [data.cName, data.cAddr] });
+		queryClient.invalidateQueries({ queryKey: ["getClients"] }).catch(() => {});
 	}
 
 	return (
@@ -92,7 +111,7 @@ function HeaderWithPopupButtons() {
 										</FormItem>
 									)}
 								/>
-								<br/>
+								<br />
 								<FormField
 									control={form.control}
 									name="cAddr"
@@ -106,7 +125,7 @@ function HeaderWithPopupButtons() {
 										</FormItem>
 									)}
 								/>
-								<br/>
+								<br />
 								<Button type="submit">Submit</Button>
 							</form>
 						</Form>
