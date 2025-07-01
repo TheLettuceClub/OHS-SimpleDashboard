@@ -15,12 +15,6 @@
  */
 
 import { hashCode } from "./util";
-import { type ColumnDef } from "@tanstack/react-table";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import EditDialog from "./EditDialog";
 
 /**
  * Jobs:
@@ -59,7 +53,7 @@ export class Job {
 	}
 }
 
-const jobsDB: Job[] = [];
+const jobsDB: Job[] = [new Job("James Murphy", "Fridge is broken", 1), new Job("Michael Madsen", "HVAC pump not in place", 2), new Job("Maria Quiroz", "Lightbulb replacement", -1)];
 
 function findJobByID(id: number): Job | undefined {
 	for (let i = 0; i < jobsDB.length; i++) {
@@ -79,34 +73,40 @@ export async function GetAllJobs(): Promise<string> {
 	);
 }
 
-export async function CreateNewJob(inName: string, inReason: string, inClient: number): Promise<string> {
-	return new Promise<string>((resolve) =>
+export async function CreateNewJob({ queryKey }: { queryKey: string[] }): Promise<string> {
+	const [inName, inReason, inClientS] = queryKey;
+	return new Promise<string>((resolve, reject) =>
 		setTimeout(() => {
 			// ensure the client ID is a valid, active one, then add it to the jobs DB
+			const inClient = parseInt(inClientS);
 			if (ValidateClientID(inClient)) {
 				jobsDB.push(new Job(inName, inReason, inClient));
 				resolve(JSON.stringify(0));
 				return;
 			}
-			resolve(JSON.stringify(-1));
+			reject(new Error(JSON.stringify(-1)));
 			return;
 		}, 1500),
 	);
 }
 
-export async function EditJob(id: number, inName: string | undefined, inReason: string | undefined, inClient: number | undefined, inFin: boolean | undefined): Promise<string> {
-	return new Promise<string>((resolve) =>
+export async function EditJob({ queryKey }: { queryKey: string[] }): Promise<string> {
+	console.log(queryKey);
+	const [id, inName, inReason, inClientS, inFin] = queryKey;
+	return new Promise<string>((resolve, reject) =>
 		setTimeout(() => {
-			const editJob = findJobByID(id);
+			const editJob = findJobByID(id as unknown as number);
 			if (editJob == undefined) {
-				resolve(JSON.stringify(-2));
+				reject(new Error(JSON.stringify(-2)));
+				//resolve();
 				return;
 			}
-			if (inClient !== undefined) {
+			if (inClientS !== undefined) {
+				const inClient = parseInt(inClientS);
 				if (ValidateClientID(inClient)) {
 					editJob.clientID = inClient;
 				} else {
-					resolve(JSON.stringify(-3));
+					reject(new Error(JSON.stringify(-3)));
 					return;
 				}
 			}
@@ -117,7 +117,7 @@ export async function EditJob(id: number, inName: string | undefined, inReason: 
 				editJob.jobReason = inReason;
 			}
 			if (inFin !== undefined) {
-				editJob.jobFinished = inFin;
+				editJob.jobFinished = inFin as unknown as boolean;
 			}
 			resolve(JSON.stringify(0));
 			return;
@@ -159,42 +159,6 @@ export class Client {
 	}
 }
 
-export const ClientColumns: ColumnDef<Client>[] = [
-	{ accessorKey: "clientName", header: "Name" },
-	{ accessorKey: "clientAddress", header: "Address" },
-	{ accessorKey: "isActive", header: "Active" },
-	{
-		header: "Actions",
-		enableHiding: false,
-		cell: ({ row }) => {
-			return (
-				<Dialog>
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button variant="ghost" className="h-8 w-8 p-0">
-								<span className="sr-only">Open menu</span>
-								<MoreHorizontal />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
-							<DialogTrigger asChild>
-								<DropdownMenuItem>Edit Client</DropdownMenuItem>
-							</DialogTrigger>
-						</DropdownMenuContent>
-					</DropdownMenu>
-					<DialogContent>
-						<DialogHeader>
-							<DialogTitle>Edit Client:</DialogTitle>
-							<DialogDescription id="description"></DialogDescription>
-						</DialogHeader>
-						<EditDialog editdata={row.original} />
-					</DialogContent>
-				</Dialog>
-			);
-		},
-	},
-];
-
 const clientsDB: Client[] = [
 	new Client("Daniel Silverstein", "3053 N Southport"),
 	new Client("Adam Meyer", "Somewhere, Utah"),
@@ -225,7 +189,7 @@ export async function GetAllClients(): Promise<string> {
 }
 
 export async function CreateNewClient({ queryKey }: { queryKey: string[] }): Promise<string> {
-	console.log(queryKey);
+	//console.log(queryKey);
 	const [inName, inAddr] = queryKey;
 	return new Promise<string>((resolve) =>
 		setTimeout(() => {
@@ -238,14 +202,13 @@ export async function CreateNewClient({ queryKey }: { queryKey: string[] }): Pro
 }
 
 export async function EditClient({ queryKey }: { queryKey: string[] }): Promise<string> {
-	const [idS, inName, inAddr, inActiveS] = queryKey;
-	const id = parseInt(idS);
-	const inActive = inActiveS === "true" ? true : false;
-	return new Promise<string>((resolve) =>
+	//console.log(queryKey);
+	const [id, inName, inAddr, inActive] = queryKey;
+	return new Promise<string>((resolve, reject) =>
 		setTimeout(() => {
-			const editClient = getClientByID(id);
+			const editClient = getClientByID(id as unknown as number);
 			if (editClient == undefined) {
-				resolve(JSON.stringify(-4));
+				reject(new Error(JSON.stringify(-4)));
 				return;
 			}
 			if (inName !== undefined) {
@@ -255,7 +218,7 @@ export async function EditClient({ queryKey }: { queryKey: string[] }): Promise<
 				editClient.clientAddress = inAddr;
 			}
 			if (inActive !== undefined) {
-				editClient.isActive = inActive;
+				editClient.isActive = inActive as unknown as boolean;
 			}
 			resolve(JSON.stringify(0));
 			return;
@@ -301,7 +264,7 @@ export class User {
 	}
 }
 
-const usersDB: User[] = [new User("shadcn", hashCode("password"))];
+const usersDB: User[] = [new User("shadcn", hashCode("password")), new User("disilverstein", hashCode("testpass!"))];
 
 function getUserByID(id: number): User | undefined {
 	for (let i = 0; i < usersDB.length; i++) {
@@ -330,6 +293,7 @@ function ValidateUser(id: number, inPass: number): boolean {
 	return user !== undefined && user.password == inPass;
 }
 
+//bc this function is only called from the login page, it doesn't use the query parameters
 export async function LoginAuth(inUName: string, inPass: number): Promise<string> {
 	return new Promise<string>((resolve) =>
 		setTimeout(() => {
@@ -365,28 +329,30 @@ export async function GetUserList(): Promise<string> {
 	);
 }
 
-export async function CreateNewUser(myID: number, myPassword: number, inUName: string, inPassword: number): Promise<string> {
-	return new Promise<string>((resolve) =>
+export async function CreateNewUser({ queryKey }: { queryKey: string[] }): Promise<string> {
+	const [myID, myPassword, inUName, inPassword] = queryKey;
+	return new Promise<string>((resolve, reject) =>
 		setTimeout(() => {
 			// verifies that uname is unique in the DB, then adds if so. Also verifies creating user is valid
-			if (ValidateUser(myID, myPassword)) {
+			if (ValidateUser(parseInt(myID), parseInt(myPassword))) {
 				if (!ValidateUserName(inUName)) {
 					// then we know no other users have that name, so we're good
-					usersDB.push(new User(inUName, inPassword));
+					usersDB.push(new User(inUName, parseInt(inPassword)));
 					resolve(JSON.stringify(0));
 					return;
 				}
-				resolve(JSON.stringify(-8));
+				reject(new Error(JSON.stringify(-8)));
 				return;
 			}
-			resolve(JSON.stringify(-9));
+			reject(new Error(JSON.stringify(-9)));
 			return;
 		}, 457),
 	);
 }
 
-export async function UpdateUserPassword(myID: number, myPassword: number, editID: number, oldPassword: number, inPassword: number): Promise<string> {
-	return new Promise<string>((resolve) =>
+export async function UpdateUserPassword({ queryKey }: { queryKey: number[] }): Promise<string> {
+	const [myID, myPassword, editID, oldPassword, inPassword] = queryKey;
+	return new Promise<string>((resolve, reject) =>
 		setTimeout(() => {
 			// verifies that editID's pass matches oldPass and that inPass is unique in the DB.
 			if (ValidateUser(myID, myPassword)) {
@@ -399,20 +365,21 @@ export async function UpdateUserPassword(myID: number, myPassword: number, editI
 						resolve(JSON.stringify(0));
 						return;
 					}
-					resolve(JSON.stringify(-10));
+					reject(new Error(JSON.stringify(-10)));
 					return;
 				}
-				resolve(JSON.stringify(-11));
+				reject(new Error(JSON.stringify(-11)));
 				return;
 			}
-			resolve(JSON.stringify(-12));
+			reject(new Error(JSON.stringify(-12)));
 			return;
 		}, 1000),
 	);
 }
 
-export async function DeleteUser(myID: number, myPassword: number, editID: number): Promise<string> {
-	return new Promise<string>((resolve) =>
+export async function DeleteUser({ queryKey }: { queryKey: number[] }): Promise<string> {
+	const [myID, myPassword, editID] = queryKey;
+	return new Promise<string>((resolve, reject) =>
 		setTimeout(() => {
 			//verifies that myID!=editID, myID's pass == myPassword, and that editID exists before doing anything.
 			if (ValidateUser(myID, myPassword)) {
@@ -425,20 +392,24 @@ export async function DeleteUser(myID: number, myPassword: number, editID: numbe
 							return;
 						}
 					}
-					resolve(JSON.stringify(-13));
+					reject(new Error(JSON.stringify(-13)));
 					return;
 				}
-				resolve(JSON.stringify(-14));
+				reject(new Error(JSON.stringify(-14)));
 				return;
 			}
-			resolve(JSON.stringify(-15));
+			reject(new Error(JSON.stringify(-15)));
 			return;
 		}, 1200),
 	);
 }
 
-/*export async function FunctionTemplate(): Promise<string> {
-	return new Promise<string>(resolve => setTimeout(() => {
+/*export async function FunctionTemplate({ queryKey }: { queryKey: string[] }): Promise<string> {
+	return new Promise<string>((resolve, reject) => setTimeout(() => {
+		if (badness) {
+			reject(new Error(""));
+			return;
+		}
 		resolve("");
 		return;
 	}, 1000));

@@ -20,3 +20,19 @@ export function hashCode(inPass: string): number {
 export const delay = function (ms: number) {
 	return new Promise((res) => setTimeout(res, ms));
 };
+
+import { QueryClient } from "@tanstack/react-query";
+
+export const queryClient = new QueryClient({
+	defaultOptions: {
+		mutations: {
+			retry: false,
+			gcTime: 1000 * 60 * 60 * 24,
+		},
+		queries: {
+			retry: false,
+			gcTime: 1000 * 60 * 60 * 24,
+			//TODO: add persister here later
+		},
+	},
+}); //abstracted here so index.tsx only exports one type of thing

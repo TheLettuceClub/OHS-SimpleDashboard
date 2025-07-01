@@ -1,32 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
-import { Client, ClientColumns, GetAllClients, CreateNewClient } from "../API";
+import { useQuery } from "@tanstack/react-query";
+import { Client, GetAllClients, GetAllJobs, Job, GetUserList, User } from "../API";
+import { ClientColumns, JobColumns, UserColumns } from "../ColDef";
 import { DataTable } from "@/components/ui/data-table";
-import Popup from "reactjs-popup";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-
-export const Route = createFileRoute("/")({
-	component: Index,
-});
-
-export const queryClient = new QueryClient();
+import { queryClient } from "../util";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import EditDialog from "../EditDialog";
 
 /**
  * This page will kinda do double duty. When not logged in, will display minimal info and request login.
  * When logged in will show all the data and queries and such.
  */
+export const Route = createFileRoute("/")({
+	component: Index,
+});
+
+const persister = createAsyncStoragePersister({
+	storage: window.localStorage,
+});
 
 function Index() {
 	const [login, setLogin] = useState(sessionStorage.getItem("login"));
 
-	if (login == "false" || login == null) {
+	if (login === "false" || login == null) {
 		return (
 			<div className="p-2">
 				<h3 className="text-3x1 font-bold underline">You are not logged in. Please click the "Login" button.</h3>
@@ -49,89 +50,47 @@ function Index() {
 			>
 				Log Out
 			</Button>
-			<QueryClientProvider client={queryClient}>
+			<PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
 				<ClientManagementPage />
+				<br />
+				<br />
+				<JobManagementPage />
+				<br />
+				<br />
+				<UserManagementPage />
 				<ReactQueryDevtools initialIsOpen={false} />
-			</QueryClientProvider>
+			</PersistQueryClientProvider>
 		</div>
 	);
 }
 
-//header w/popup buttons
-function HeaderWithPopupButtons() {
-	const FormSchema = z.object({
-		cName: z.string().min(2, {
-			message: "Name must be at least 2 characters.",
-		}),
-		cAddr: z.string().min(2, {
-			message: "Address must be at least 2 characters.",
-		}),
-	});
-
-	const form = useForm<z.infer<typeof FormSchema>>({
-		resolver: zodResolver(FormSchema),
-		defaultValues: {
-			cName: "",
-			cAddr: "",
-		},
-	});
-
-	const mutation = useMutation({
-		mutationFn: CreateNewClient,
-	});
-
-	function onSubmit(data: z.infer<typeof FormSchema>) {
-		console.log("submit button clicked");
-		//console.log(data);
-		//TODO: add tanstack stuff? unknown if would work, need info on params
-		//CreateNewClient(data.cName, data.cAddr).catch(() => {});
-		mutation.mutate({ queryKey: [data.cName, data.cAddr] });
-		queryClient.invalidateQueries({ queryKey: ["getClients"] }).catch(() => {});
+function NuCreateButton({ type }: { type: number }) {
+	function getName(): string {
+		if (type == 1) {
+			return " User";
+		} else if (type == 2) {
+			return " Client";
+		} else if (type == 3) {
+			return " Job";
+		} else {
+			return " invalid ";
+		}
 	}
 
 	return (
 		<>
-			<h4>Clients:</h4>
-			<Popup trigger={<Button>Create new Client</Button>} modal>
-				<div className="modal">
-					<div className="header">Client Creation:</div>
-					<div className="content">
-						<Form {...form}>
-							<form onSubmit={form.handleSubmit(onSubmit)}>
-								<FormField
-									control={form.control}
-									name="cName"
-									render={({ field }) => (
-										<FormItem className="row">
-											<FormLabel>Client Name:</FormLabel>
-											<FormControl>
-												<Input {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<br />
-								<FormField
-									control={form.control}
-									name="cAddr"
-									render={({ field }) => (
-										<FormItem className="row">
-											<FormLabel>Client Address:</FormLabel>
-											<FormControl>
-												<Input {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<br />
-								<Button type="submit">Submit</Button>
-							</form>
-						</Form>
-					</div>
-				</div>
-			</Popup>
+			<Dialog>
+				<DialogTrigger asChild>
+					<Button>Create new {getName()}</Button>
+				</DialogTrigger>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Create new {getName()}:</DialogTitle>
+						<DialogDescription id="description"></DialogDescription>
+					</DialogHeader>
+					<EditDialog editdata={null} newP={true} type={type} />
+				</DialogContent>
+			</Dialog>
 		</>
 	);
 }
@@ -150,8 +109,51 @@ function ClientManagementPage() {
 
 	return (
 		<div className="container mx-auto py-10">
-			<HeaderWithPopupButtons />
+			<h4>Clients:</h4>
+			<NuCreateButton type={2} />
 			<DataTable columns={ClientColumns} data={data} />
+		</div>
+	);
+}
+
+function JobManagementPage() {
+	const { isPending, error, data, isFetching } = useQuery({
+		queryKey: ["getJobs"],
+		queryFn: async () => {
+			return JSON.parse(await GetAllJobs()) as Job[];
+		},
+	});
+
+	if (isPending || isFetching) return "Loading...";
+
+	if (error) return "An error has occurred: " + error.message;
+
+	return (
+		<div className="container mx-auto py-10">
+			<h4>Jobs:</h4>
+			<NuCreateButton type={3} />
+			<DataTable columns={JobColumns} data={data} />
+		</div>
+	);
+}
+
+function UserManagementPage() {
+	const { isPending, error, data, isFetching } = useQuery({
+		queryKey: ["getUsers"],
+		queryFn: async () => {
+			return JSON.parse(await GetUserList()) as User[];
+		},
+	});
+
+	if (isPending || isFetching) return "Loading...";
+
+	if (error) return "An error has occurred: " + error.message;
+
+	return (
+		<div className="container mx-auto py-10">
+			<h4>Users:</h4>
+			<NuCreateButton type={1} />
+			<DataTable columns={UserColumns} data={data} />
 		</div>
 	);
 }
