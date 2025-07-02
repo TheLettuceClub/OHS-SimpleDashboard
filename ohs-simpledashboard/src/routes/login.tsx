@@ -1,3 +1,9 @@
+/**
+ * The login page. Very basic, just a username and password entry with a submit button.
+ * Correct logins put two values into sessionstorage, create a toast message, then redirect to the main page.
+ * Incorrect logins also display a toast, but don't do anything else.
+ */
+
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -8,7 +14,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { LoginAuth } from "../API";
 import { hashCode, delay } from "../util";
-import "./popup.css";
 
 export const Route = createFileRoute("/login")({
 	component: Login,
@@ -56,8 +61,8 @@ function Login() {
 					await delay(550); //wait a bit so it's less jarring
 					navigate({ to: "/" }).catch(() => {});
 				} else {
-					sessionStorage.setItem("login", "true");
-					sessionStorage.setItem("userID", rdata.userID.toString());
+					sessionStorage.removeItem("login");
+					sessionStorage.removeItem("userID");
 					toast("Invalid credentials.");
 				}
 			})
@@ -76,7 +81,7 @@ function Login() {
 							<FormItem>
 								<FormLabel>Username</FormLabel>
 								<FormControl>
-									<Input placeholder="shadcn" {...field} />
+									<Input placeholder="username" {...field} />
 								</FormControl>
 								<FormMessage />
 							</FormItem>

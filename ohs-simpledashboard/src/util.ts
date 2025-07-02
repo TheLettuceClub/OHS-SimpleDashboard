@@ -23,6 +23,7 @@ export const delay = function (ms: number) {
 
 import { QueryClient } from "@tanstack/react-query";
 
+//abstracted here so index.tsx only exports one type of thing
 export const queryClient = new QueryClient({
 	defaultOptions: {
 		mutations: {
@@ -32,7 +33,6 @@ export const queryClient = new QueryClient({
 		queries: {
 			retry: false,
 			gcTime: 1000 * 60 * 60 * 24,
-			//TODO: add persister here later
 		},
 	},
-}); //abstracted here so index.tsx only exports one type of thing
+});

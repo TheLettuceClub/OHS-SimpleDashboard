@@ -1,29 +1,35 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Client, GetAllClients, GetAllJobs, Job, GetUserList, User } from "../API";
-import { ClientColumns, JobColumns, UserColumns } from "../ColDef";
-import { DataTable } from "@/components/ui/data-table";
-import { Button } from "@/components/ui/button";
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { queryClient } from "../util";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import EditDialog from "../EditDialog";
-
 /**
  * This page will kinda do double duty. When not logged in, will display minimal info and request login.
  * When logged in will show all the data and queries and such.
  */
+
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { useQuery, QueryClientProvider } from "@tanstack/react-query";
+import { Client, GetAllClients, GetAllJobs, Job, GetUserList, User } from "../API";
+import { ClientColumns, JobColumns, UserColumns } from "../ColDef";
+import { DataTable } from "@/components/ui/data-table";
+import { Button } from "@/components/ui/button";
+//import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+//import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import { queryClient } from "../util";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import EditDialog from "../EditDialog";
+
 export const Route = createFileRoute("/")({
 	component: Index,
 });
 
-const persister = createAsyncStoragePersister({
-	storage: window.localStorage,
-});
+//saves but doesn't effectively load
+//const persister = createAsyncStoragePersister({
+//	storage: window.localStorage,
+//});
 
+/**
+ * Primary component that hosts all the others.
+ * Sets up login checking and TSQuery stuff as well.
+ * @returns component
+ */
 function Index() {
 	const [login, setLogin] = useState(sessionStorage.getItem("login"));
 
@@ -37,6 +43,7 @@ function Index() {
 
 	function logout() {
 		sessionStorage.removeItem("login");
+		sessionStorage.removeItem("userID");
 		setLogin("false");
 	}
 
@@ -50,7 +57,7 @@ function Index() {
 			>
 				Log Out
 			</Button>
-			<PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
+			<QueryClientProvider client={queryClient}>
 				<ClientManagementPage />
 				<br />
 				<br />
@@ -58,12 +65,16 @@ function Index() {
 				<br />
 				<br />
 				<UserManagementPage />
-				<ReactQueryDevtools initialIsOpen={false} />
-			</PersistQueryClientProvider>
+			</QueryClientProvider>
 		</div>
 	);
 }
 
+/**
+ * Basic type-agnostic button and dialog component.
+ * @param type 1-3 integer that has the same meaning as EditDialog's type property.
+ * @returns component
+ */
 function NuCreateButton({ type }: { type: number }) {
 	function getName(): string {
 		if (type == 1) {
@@ -73,7 +84,7 @@ function NuCreateButton({ type }: { type: number }) {
 		} else if (type == 3) {
 			return " Job";
 		} else {
-			return " invalid ";
+			return " invalid";
 		}
 	}
 
@@ -95,6 +106,10 @@ function NuCreateButton({ type }: { type: number }) {
 	);
 }
 
+/**
+ * DataTable host for Clients
+ * @returns component
+ */
 function ClientManagementPage() {
 	const { isPending, error, data, isFetching } = useQuery({
 		queryKey: ["getClients"],
@@ -116,6 +131,10 @@ function ClientManagementPage() {
 	);
 }
 
+/**
+ * DataTable host for Jobs
+ * @returns component
+ */
 function JobManagementPage() {
 	const { isPending, error, data, isFetching } = useQuery({
 		queryKey: ["getJobs"],
@@ -137,6 +156,10 @@ function JobManagementPage() {
 	);
 }
 
+/**
+ * DataTable host for Users
+ * @returns component
+ */
 function UserManagementPage() {
 	const { isPending, error, data, isFetching } = useQuery({
 		queryKey: ["getUsers"],

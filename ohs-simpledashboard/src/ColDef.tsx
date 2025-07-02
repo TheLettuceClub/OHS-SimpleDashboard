@@ -1,3 +1,7 @@
+/**
+ * The column definitions for the datatables on the index page.
+ */
+
 import { type ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";

@@ -1,3 +1,11 @@
+/**
+ * The multipurpose edit dialog.
+ * The primary component in this file is the EditDialog, a dynamic popup component that allows the user to edit and create Users, Clients and Jobs.
+ * The visible UI elements are generated dynamically, based on the requested type passed in by other code.
+ * It can also create new elements if the newP flag is set. Otherwise, a valid Client, User, or Job must be passed so it can display it's data to allow editing.
+ * All 6 possible paths (new and not, Client/User/Job) use TSQuery mutators to modify the data in the API.
+ */
+
 import { Client, User, Job, EditClient, EditJob, CreateNewClient, CreateNewJob, UpdateUserPassword, CreateNewUser } from "./API";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -9,6 +17,13 @@ import { Input } from "@/components/ui/input";
 import { useMutation } from "@tanstack/react-query";
 import { queryClient, hashCode } from "./util";
 
+/**
+ * The primary component. Meant to be displayed as part of a Dialog or Popup (i.e. modal and above other content).
+ * @param editdata Either a Client, User, or Job. If newP is false, this must be non-null, as its data will be displayed to the UI and potentially edited by the user. If newP is true, it can be null or undef, as it is totally ignored.
+ * @param newP Whether the component is being summoned to create a new Client/User/Job or to edit an existing one. Changes some display behavior and which mutator path is used when data is submitted.
+ * @param type A 1-3 integer used to determine the type of editdata. 1=User, 2=Client, 3=Job. This must be set or else things break.
+ * @returns the component to be rendered
+ */
 function EditDialog({ editdata, newP, type }: { editdata: Client | User | Job; newP: boolean; type: number }) {
 	//function getName(): string {
 	//if ("username" in editdata) {
@@ -24,6 +39,9 @@ function EditDialog({ editdata, newP, type }: { editdata: Client | User | Job; n
 
 	const description = document.getElementById("description")!;
 
+	/**
+	 * These can be made optional, but it causes headaches later so make them required.
+	 */
 	const FormSchema = z.object({
 		cName: z.string().min(2, "Name must be at least 2 characters."),
 		cAddr: z.string().min(2, "Address must be at least 2 characters."),
@@ -40,6 +58,11 @@ function EditDialog({ editdata, newP, type }: { editdata: Client | User | Job; n
 		mPass: z.string().min(2, "Password must be at least 2 characters."),
 	});
 
+	/**
+	 * Generates the default values for all possible form types.
+	 * If creating a new object, the defaults are different because we can't pull from existing data.
+	 * @returns an object that useForm can accept.
+	 */
 	function createParms() {
 		if (newP) {
 			return {
@@ -52,10 +75,10 @@ function EditDialog({ editdata, newP, type }: { editdata: Client | User | Job; n
 				clientID: "1",
 				jobFin: false,
 
-				cUName: "",
-				cPass: "",
+				cUName: "null",
+				cPass: "null",
 				oPass: "null",
-				mPass: "",
+				mPass: "null",
 			};
 		} else {
 			return {
@@ -113,6 +136,11 @@ function EditDialog({ editdata, newP, type }: { editdata: Client | User | Job; n
 		mutationKey: ["createJob"],
 	});
 
+	/**
+	 * Handles submitted data. uses type and newP to determine which mutator path to invoke.
+	 * @param data a compound struct of all possible fields, see createParms() for fields.
+	 * @returns nothing
+	 */
 	async function onSubmit(data: z.infer<typeof FormSchema>) {
 		console.log("submit button clicked");
 		console.log(data);
@@ -170,6 +198,10 @@ function EditDialog({ editdata, newP, type }: { editdata: Client | User | Job; n
 		}
 	}
 
+	/**
+	 * First render "section". These components will appear in the first row of the Dialog, depending on the type
+	 * @returns one of four components.
+	 */
 	function RenderPart1() {
 		if (type == 2) {
 			return (
@@ -201,7 +233,7 @@ function EditDialog({ editdata, newP, type }: { editdata: Client | User | Job; n
 								<FormItem className="row">
 									<FormLabel>Username:</FormLabel>
 									<FormControl>
-										<Input {...field} />
+										<Input placeholder="" {...field} />
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -242,6 +274,10 @@ function EditDialog({ editdata, newP, type }: { editdata: Client | User | Job; n
 		}
 	}
 
+	/**
+	 * Second render "section". These components will appear in the second row of the Dialog, depending on the type
+	 * @returns one of four components.
+	 */
 	function RenderPart2() {
 		if (type == 2) {
 			return (
@@ -273,7 +309,7 @@ function EditDialog({ editdata, newP, type }: { editdata: Client | User | Job; n
 								<FormItem className="row">
 									<FormLabel>Password:</FormLabel>
 									<FormControl>
-										<Input type="password" {...field} />
+										<Input type="password" placeholder="" {...field} />
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -292,7 +328,7 @@ function EditDialog({ editdata, newP, type }: { editdata: Client | User | Job; n
 								<FormItem className="row">
 									<FormLabel>Old Password:</FormLabel>
 									<FormControl>
-										<Input type="password" {...field} />
+										<Input type="password" placeholder="" {...field} />
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -326,6 +362,10 @@ function EditDialog({ editdata, newP, type }: { editdata: Client | User | Job; n
 		}
 	}
 
+	/**
+	 * Third render "section". These components will appear in the third row of the Dialog, depending on the type
+	 * @returns one of three components.
+	 */
 	function RenderPart3() {
 		if (type == 2 && !newP) {
 			return (
@@ -361,7 +401,7 @@ function EditDialog({ editdata, newP, type }: { editdata: Client | User | Job; n
 							<FormItem className="row">
 								<FormLabel>New Password:</FormLabel>
 								<FormControl>
-									<Input type="password" {...field} />
+									<Input type="password" placeholder="" {...field} />
 								</FormControl>
 								<FormMessage />
 							</FormItem>
@@ -394,6 +434,10 @@ function EditDialog({ editdata, newP, type }: { editdata: Client | User | Job; n
 		}
 	}
 
+	/**
+	 * Fourth render "section". These components will appear in the fourth row of the Dialog, depending on the type
+	 * @returns one of two components.
+	 */
 	function RenderPart4() {
 		if (type == 3 && !newP) {
 			return (
@@ -429,7 +473,7 @@ function EditDialog({ editdata, newP, type }: { editdata: Client | User | Job; n
 							<FormItem className="row">
 								<FormLabel>Your Password:</FormLabel>
 								<FormControl>
-									<Input type="password" {...field} />
+									<Input type="password" placeholder="" {...field} />
 								</FormControl>
 								<FormMessage />
 							</FormItem>

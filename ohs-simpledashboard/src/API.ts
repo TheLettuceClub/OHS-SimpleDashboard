@@ -14,7 +14,7 @@
  * These error codes are global to the entire API to assist in identifying where in a given "endpoint" the failure occurred.
  */
 
-import { hashCode } from "./util";
+import { hashCode } from "./util.ts";
 
 /**
  * Jobs:
@@ -64,9 +64,38 @@ function findJobByID(id: number): Job | undefined {
 	return;
 }
 
+function SaveJobsDB() {
+	//TODO: make sure this doesn't run more than once at a time to prevent overwriting
+	localStorage.setItem("JobsDB", JSON.stringify(jobsDB));
+}
+
+function LoadJobsDB() {
+	const item = localStorage.getItem("JobsDB");
+	if (item !== null) {
+		const data = JSON.parse(item) as Job[];
+		//then merge the DBs
+		data.forEach((job) => {
+			const edit = findJobByID(job.key);
+			if (edit !== undefined) {
+				edit.techName = job.techName;
+				edit.clientID = job.clientID;
+				edit.jobFinished = job.jobFinished;
+				edit.jobReason = job.jobReason;
+			} else {
+				const nJob = new Job(job.techName, job.jobReason, job.clientID);
+				nJob.jobFinished = job.jobFinished;
+				jobsDB.push(nJob);
+			}
+		});
+		console.log("merged LS and in-memory (jobs):");
+		console.log(jobsDB);
+	}
+}
+
 export async function GetAllJobs(): Promise<string> {
 	return new Promise<string>((resolve) =>
 		setTimeout(() => {
+			LoadJobsDB();
 			resolve(JSON.stringify(jobsDB));
 			return;
 		}, 1000),
@@ -81,6 +110,7 @@ export async function CreateNewJob({ queryKey }: { queryKey: string[] }): Promis
 			const inClient = parseInt(inClientS);
 			if (ValidateClientID(inClient)) {
 				jobsDB.push(new Job(inName, inReason, inClient));
+				SaveJobsDB();
 				resolve(JSON.stringify(0));
 				return;
 			}
@@ -119,6 +149,7 @@ export async function EditJob({ queryKey }: { queryKey: string[] }): Promise<str
 			if (inFin !== undefined) {
 				editJob.jobFinished = inFin as unknown as boolean;
 			}
+			SaveJobsDB();
 			resolve(JSON.stringify(0));
 			return;
 		}, 1200),
@@ -178,10 +209,38 @@ function ValidateClientID(id: number): boolean {
 	return getClientByID(id) !== undefined ? true : false;
 }
 
+function SaveClientsDB() {
+	//TODO: make sure this doesn't run more than once at a time to prevent overwriting
+	localStorage.setItem("ClientsDB", JSON.stringify(clientsDB));
+}
+
+function LoadClientsDB() {
+	const item = localStorage.getItem("ClientsDB");
+	if (item !== null) {
+		const data = JSON.parse(item) as Client[];
+		//then merge the DBs
+		data.forEach((client) => {
+			const edit = getClientByID(client.key);
+			if (edit !== undefined) {
+				edit.clientAddress = client.clientAddress;
+				edit.clientName = client.clientName;
+				edit.isActive = client.isActive;
+			} else {
+				const nClient = new Client(client.clientName, client.clientAddress);
+				nClient.isActive = client.isActive;
+				clientsDB.push(nClient);
+			}
+		});
+		console.log("merged LS and in-memory (client):");
+		console.log(clientsDB);
+	}
+}
+
 export async function GetAllClients(): Promise<string> {
 	return new Promise<string>((resolve) =>
 		setTimeout(() => {
 			//console.log("clientsDB is of length " + clientsDB.length);
+			LoadClientsDB();
 			resolve(JSON.stringify(clientsDB));
 			return;
 		}, 1002),
@@ -195,6 +254,7 @@ export async function CreateNewClient({ queryKey }: { queryKey: string[] }): Pro
 		setTimeout(() => {
 			clientsDB.push(new Client(inName, inAddr));
 			//console.log("clientsDB is now of length " + clientsDB.length);
+			SaveClientsDB();
 			resolve(JSON.stringify(0));
 			return;
 		}, 560),
@@ -220,6 +280,7 @@ export async function EditClient({ queryKey }: { queryKey: string[] }): Promise<
 			if (inActive !== undefined) {
 				editClient.isActive = inActive as unknown as boolean;
 			}
+			SaveClientsDB();
 			resolve(JSON.stringify(0));
 			return;
 		}, 500),
@@ -293,8 +354,33 @@ function ValidateUser(id: number, inPass: number): boolean {
 	return user !== undefined && user.password == inPass;
 }
 
+function SaveUsersDB() {
+	//TODO: make sure this doesn't run more than once at a time to prevent overwriting
+	localStorage.setItem("UsersDB", JSON.stringify(usersDB));
+}
+
+function LoadUsersDB() {
+	const item = localStorage.getItem("UsersDB");
+	if (item !== null) {
+		const data = JSON.parse(item) as User[];
+		//then merge the DBs
+		data.forEach((user) => {
+			const edit = getUserByID(user.key);
+			if (edit !== undefined) {
+				edit.username = user.username;
+				edit.password = user.password;
+			} else {
+				usersDB.push(new User(user.username, user.password));
+			}
+		});
+		console.log("merged LS and in-memory (user):");
+		console.log(usersDB);
+	}
+}
+
 //bc this function is only called from the login page, it doesn't use the query parameters
 export async function LoginAuth(inUName: string, inPass: number): Promise<string> {
+	LoadUsersDB();
 	return new Promise<string>((resolve) =>
 		setTimeout(() => {
 			//will compare params to userDB, returning JSON struct of form: {validLogin: boolean, userID: number, errCode: number}
@@ -323,6 +409,7 @@ export async function LoginAuth(inUName: string, inPass: number): Promise<string
 export async function GetUserList(): Promise<string> {
 	return new Promise<string>((resolve) =>
 		setTimeout(() => {
+			LoadUsersDB();
 			resolve(JSON.stringify(usersDB));
 			return;
 		}, 1000),
@@ -338,6 +425,7 @@ export async function CreateNewUser({ queryKey }: { queryKey: string[] }): Promi
 				if (!ValidateUserName(inUName)) {
 					// then we know no other users have that name, so we're good
 					usersDB.push(new User(inUName, parseInt(inPassword)));
+					SaveUsersDB();
 					resolve(JSON.stringify(0));
 					return;
 				}
@@ -362,6 +450,7 @@ export async function UpdateUserPassword({ queryKey }: { queryKey: number[] }): 
 					if (user.password === oldPassword) {
 						// it's correct, change it
 						user.password = inPassword;
+						SaveUsersDB();
 						resolve(JSON.stringify(0));
 						return;
 					}
@@ -377,6 +466,7 @@ export async function UpdateUserPassword({ queryKey }: { queryKey: number[] }): 
 	);
 }
 
+//currently unused.
 export async function DeleteUser({ queryKey }: { queryKey: number[] }): Promise<string> {
 	const [myID, myPassword, editID] = queryKey;
 	return new Promise<string>((resolve, reject) =>
@@ -388,6 +478,7 @@ export async function DeleteUser({ queryKey }: { queryKey: number[] }): Promise<
 					for (let i = 0; i < usersDB.length; i++) {
 						if (usersDB[i].key == editID) {
 							usersDB.splice(i, 1);
+							SaveUsersDB();
 							resolve(JSON.stringify(0));
 							return;
 						}
@@ -405,6 +496,7 @@ export async function DeleteUser({ queryKey }: { queryKey: number[] }): Promise<
 }
 
 /*export async function FunctionTemplate({ queryKey }: { queryKey: string[] }): Promise<string> {
+	const [trueParams] = queryKey;
 	return new Promise<string>((resolve, reject) => setTimeout(() => {
 		if (badness) {
 			reject(new Error(""));

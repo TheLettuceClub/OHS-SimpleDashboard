@@ -15,6 +15,13 @@ export const Route = createRootRoute({
 				<Link to="/login" className="[&.active]:font-bold">
 					Login
 				</Link>
+				<button
+					onClick={() => {
+						localStorage.clear();
+					}}
+				>
+					Clear LS (test)
+				</button>
 			</div>
 			<hr />
 			<Outlet />
